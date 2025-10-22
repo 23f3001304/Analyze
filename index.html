@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CI Pipeline & Data Analysis | Project Refactor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --color-background: #0A0A0A;
+            --color-text: #EAEAEA;
+            --color-primary: #FFFFFF;
+            --color-accent: #4A90E2;
+            --font-sans: 'Inter', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+            --container-width: 1100px;
+            --grid-gap: 4rem;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--color-background);
+            color: var(--color-text);
+            font-family: var(--font-sans);
+            font-weight: 300;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        #webgl-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        main {
+            width: 100%;
+            padding: 0 2rem;
+        }
+
+        .container {
+            max-width: var(--container-width);
+            margin: 0 auto;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            text-align: left;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 5rem);
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--color-primary);
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: clamp(1rem, 2vw, 1.25rem);
+            font-weight: 300;
+            max-width: 60ch;
+            opacity: 0.8;
+        }
+        
+        .hero .line {
+            overflow: hidden;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: var(--grid-gap);
+            padding: 5rem 0;
+        }
+
+        .grid-item {
+            opacity: 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background-color: rgba(16, 16, 16, 0.5);
+            backdrop-filter: blur(10px);
+            border-radius: 8px;
+            padding: 2rem;
+            overflow: hidden;
+        }
+
+        .grid-item h2 {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 1.25rem;
+            color: var(--color-primary);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        pre {
+            background-color: rgba(0,0,0,0.4);
+            border-radius: 4px;
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-size: 0.875rem;
+        }
+        
+        code {
+            font-family: var(--font-mono);
+            color: var(--color-text);
+            white-space: pre;
+        }
+
+        /* Basic Syntax Highlighting */
+        .token.comment { color: #888; }
+        .token.keyword { color: #c792ea; }
+        .token.string { color: #c3e88d; }
+        .token.function { color: #82aaff; }
+        .token.number { color: #f78c6c; }
+        .token.operator { color: #89ddff; }
+        .token.punctuation { color: #89ddff; }
+        .token.class-name { color: #ffcb6b; }
+        .token.yaml-key { color: #82aaff; }
+        .token.yaml-string { color: #c3e88d; }
+
+        @media (min-width: 768px) {
+            .grid-container {
+                gap: calc(var(--grid-gap) * 1.5);
+            }
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" integrity="sha512-dLxUelApnYxpLt6K2iomGngnQ43cWApublication9fb1JHeqotEdaBDRGlLyabSgTxcZRRIQ5HEutNqwVvvubN/Ycw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha512-7eHRwcbYkK4d9g/6tD/mhkf++eoTHwpNM9woBxtPUBWm67zeAfFC+HrdoE2GanKeocly/VxeLvIqwvCdk7qScg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha512-onMTRKJBKz8M1TnqqDuGBlowlH0ohFzMXYRNebz+yOcc5TQr/zIAlYXwbcvGQFC/EcAVbPuWbKaochan9uYgNA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha512-z4OUqw38qNLpn1libAN9BsoDx6nbNFio5lA6CuTp9NlK83b89hgyCVq+N5FdBJptINztxn1Z3SaKSKUS5UP60Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body>
+    <canvas id="webgl-canvas"></canvas>
+
+    <main>
+        <div class="container">
+            <header class="hero">
+                <div class="line">
+                    <h1 id="hero-title-1">Refactor & Deploy.</h1>
+                </div>
+                <div class="line">
+                    <h1 id="hero-title-2">Automated CI Pipeline.</h1>
+                </div>
+                <p id="hero-subtitle">
+                    Implementation of a robust CI/CD workflow for automated analysis and deployment. This page documents the core assets: the fixed Python script, converted data source, and the GitHub Actions workflow configuration.
+                </p>
+            </header>
+
+            <div class="grid-container">
+                <section class="grid-item" id="script-item">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                        execute.py
+                    </h2>
+                    <pre><code class="language-python"><span class="token keyword">import</span> json
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+
+<span class="token keyword">def</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># Read the data from CSV</span>
+    df <span class="token operator">=</span> pd<span class="token punctuation">.</span>read_csv<span class="token punctuation">(</span><span class="token string">"data.csv"</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># Compute revenue</span>
+    df<span class="token punctuation">[</span><span class="token string">"revenue"</span><span class="token punctuation">]</span> <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">"units"</span><span class="token punctuation">]</span> <span class="token operator">*</span> df<span class="token punctuation">[</span><span class="token string">"price"</span><span class="token punctuation">]</span>
+
+    <span class="token comment"># row_count</span>
+    row_count <span class="token operator">=</span> len<span class="token punctuation">(</span>df<span class="token punctuation">)</span>
+
+    <span class="token comment"># regions: count of distinct regions</span>
+    regions_count <span class="token operator">=</span> df<span class="token punctuation">[</span><span class="token string">"region"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>nunique<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># top_n_products_by_revenue (n=3)</span>
+    n <span class="token operator">=</span> <span class="token number">3</span>
+    top_products <span class="token operator">=</span> <span class="token punctuation">(</span>
+        df<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token string">"product"</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">"revenue"</span><span class="token punctuation">]</span>
+        <span class="token punctuation">.</span>sum<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>sort_values<span class="token punctuation">(</span>ascending<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>head<span class="token punctuation">(</span>n<span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+    top_products_list <span class="token operator">=</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span><span class="token string">"product"</span><span class="token punctuation">:</span> row<span class="token punctuation">[</span><span class="token string">"product"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"revenue"</span><span class="token punctuation">:</span> float<span class="token punctuation">(</span>row<span class="token punctuation">[</span><span class="token string">"revenue"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">}</span>
+        <span class="token keyword">for</span> _<span class="token punctuation">,</span> row <span class="token keyword">in</span> top_products<span class="token punctuation">.</span>iterrows<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">]</span>
+
+    <span class="token comment"># rolling_7d_revenue_by_region</span>
+    df<span class="token punctuation">[</span><span class="token string">"date"</span><span class="token punctuation">]</span> <span class="token operator">=</span> pd<span class="token punctuation">.</span>to_datetime<span class="token punctuation">(</span>df<span class="token punctuation">[</span><span class="token string">"date"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    daily_rev <span class="token operator">=</span> <span class="token punctuation">(</span>
+        df<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"region"</span><span class="token punctuation">,</span> <span class="token string">"date"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">"revenue"</span><span class="token punctuation">]</span>  <span class="token comment"># Fixed typo: revenew -&gt; revenue</span>
+        <span class="token punctuation">.</span>sum<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>sort_values<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"region"</span><span class="token punctuation">,</span> <span class="token string">"date"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token comment"># Compute 7-day rolling mean</span>
+    rolling <span class="token operator">=</span> <span class="token punctuation">(</span>
+        daily_rev<span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token string">"region"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>apply<span class="token punctuation">(</span>
+            <span class="token keyword">lambda</span> g<span class="token punctuation">:</span> g<span class="token punctuation">.</span>set_index<span class="token punctuation">(</span><span class="token string">"date"</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">"revenue"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>rolling<span class="token punctuation">(</span><span class="token string">"7D"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>mean<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token comment"># Fixed typo</span>
+            include_groups<span class="token operator">=</span><span class="token boolean">False</span>
+        <span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span>name<span class="token operator">=</span><span class="token string">"rolling_7d_revenue"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+
+    last_rolling <span class="token operator">=</span> <span class="token punctuation">(</span>
+        rolling<span class="token punctuation">.</span>sort_values<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"region"</span><span class="token punctuation">,</span> <span class="token string">"date"</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>groupby<span class="token punctuation">(</span><span class="token string">"region"</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span>tail<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token punctuation">)</span>
+
+    rolling_summary <span class="token operator">=</span> <span class="token punctuation">{</span>
+        row<span class="token punctuation">[</span><span class="token string">"region"</span><span class="token punctuation">]</span><span class="token punctuation">:</span> float<span class="token punctuation">(</span>row<span class="token punctuation">[</span><span class="token string">"rolling_7d_revenue"</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">for</span> _<span class="token punctuation">,</span> row <span class="token keyword">in</span> last_rolling<span class="token punctuation">.</span>iterrows<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+
+    result <span class="token operator">=</span> <span class="token punctuation">{</span>
+        <span class="token string">"row_count"</span><span class="token punctuation">:</span> int<span class="token punctuation">(</span>row_count<span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token string">"regions"</span><span class="token punctuation">:</span> int<span class="token punctuation">(</span>regions_count<span class="token punctuation">)</span><span class="token punctuation">,</span>
+        <span class="token string">"top_n_products_by_revenue"</span><span class="token punctuation">:</span> top_products_list<span class="token punctuation">,</span>
+        <span class="token string">"rolling_7d_revenue_by_region"</span><span class="token punctuation">:</span> rolling_summary<span class="token punctuation">,</span>
+    <span class="token punctuation">}</span>
+
+    print<span class="token punctuation">(</span>json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span>result<span class="token punctuation">,</span> indent<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    main<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+                </section>
+                
+                <section class="grid-item" id="data-item">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        data.csv
+                    </h2>
+                    <pre><code>date,product,region,units,price
+2023-01-01,Alpha,North,10,15.5
+2023-01-01,Beta,South,20,25.0
+2023-01-02,Alpha,North,12,15.5
+2023-01-03,Gamma,North,5,50.2
+2023-01-04,Beta,South,22,25.0
+2023-01-05,Alpha,West,15,15.5
+2023-01-06,Gamma,East,8,50.2
+2023-01-07,Beta,West,30,25.0
+2023-01-08,Alpha,North,11,15.5
+2023-01-09,Gamma,South,7,50.2
+2023-01-10,Beta,East,25,25.0
+2023-01-11,Alpha,West,18,15.5
+2023-01-12,Gamma,North,6,50.2
+2023-01-13,Beta,South,28,25.0
+2023-01-14,Alpha,East,14,15.5
+2023-01-15,Gamma,West,9,50.2
+</code></pre>
+                </section>
+
+                <section class="grid-item" id="ci-item">
+                    <h2>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+                        .github/workflows/ci.yml
+                    </h2>
+                    <pre><code class="language-yaml"><span class="token yaml-key">name:</span> <span class="token yaml-string">CI & Deploy Results</span>
+
+<span class="token yaml-key">on:</span>
+  <span class="token yaml-key">push:</span>
+    <span class="token yaml-key">branches:</span>
+      <span class="token yaml-string">- main</span>
+
+<span class="token yaml-key">permissions:</span>
+  <span class="token yaml-key">contents:</span> <span class="token yaml-string">read</span>
+  <span class="token yaml-key">pages:</span> <span class="token yaml-string">write</span>
+  <span class="token yaml-key">id-token:</span> <span class="token yaml-string">write</span>
+
+<span class="token yaml-key">concurrency:</span>
+  <span class="token yaml-key">group:</span> <span class="token yaml-string">"pages"</span>
+  <span class="token yaml-key">cancel-in-progress:</span> <span class="token yaml-string">true</span>
+
+<span class="token yaml-key">jobs:</span>
+  <span class="token yaml-key">deploy:</span>
+    <span class="token yaml-key">environment:</span>
+      <span class="token yaml-key">name:</span> <span class="token yaml-string">github-pages</span>
+      <span class="token yaml-key">url:</span> <span class="token yaml-string">${{ steps.deployment.outputs.page_url }}</span>
+    <span class="token yaml-key">runs-on:</span> <span class="token yaml-string">ubuntu-latest</span>
+    <span class="token yaml-key">steps:</span>
+      <span class="token yaml-string">- name: Checkout</span>
+        <span class="token yaml-key">uses:</span> <span class="token yaml-string">actions/checkout@v4</span>
+
+      <span class="token yaml-string">- name: Set up Python 3.11</span>
+        <span class="token yaml-key">uses:</span> <span class="token yaml-string">actions/setup-python@v5</span>
+        <span class="token yaml-key">with:</span>
+          <span class="token yaml-key">python-version:</span> <span class="token yaml-string">"3.11"</span>
+
+      <span class="token yaml-string">- name: Install dependencies</span>
+        <span class="token yaml-key">run:</span> <span class="token yaml-string">|</span>
+          <span class="token yaml-string">python -m pip install --upgrade pip
+          pip install ruff "pandas>=2.2,&lt;3.0"</span>
+
+      <span class="token yaml-string">- name: Lint with Ruff</span>
+        <span class="token yaml-key">run:</span> <span class="token yaml-string">ruff check .</span>
+
+      <span class="token yaml-string">- name: Generate result file</span>
+        <span class="token yaml-key">run:</span> <span class="token yaml-string">python execute.py &gt; result.json</span>
+      
+      <span class="token yaml-string">- name: Setup Pages</span>
+        <span class="token yaml-key">uses:</span> <span class="token yaml-string">actions/configure-pages@v4</span>
+
+      <span class="token yaml-string">- name: Create Pages artifact directory</span>
+        <span class="token yaml-key">run:</span> <span class="token yaml-string">|</span>
+          <span class="token yaml-string">mkdir -p _site
+          mv result.json _site/</span>
+      
+      <span class="token yaml-string">- name: Upload artifact</span>
+        <span class="token yaml-key">uses:</span> <span class="token yaml-string">actions/upload-pages-artifact@v3</span>
+        <span class="token yaml-key">with:</span>
+          <span class="token yaml-key">path:</span> <span class="token yaml-string">'./_site'</span>
+
+      <span class="token yaml-string">- name: Deploy to GitHub Pages</span>
+        <span class="token yaml-key">id:</span> <span class="token yaml-string">deployment</span>
+        <span class="token yaml-key">uses:</span> <span class="token yaml-string">actions/deploy-pages@v4</span>
+</code></pre>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', () => {
+
+        // --- Three.js Background ---
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('webgl-canvas'), antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        const geometry = new THREE.PlaneGeometry(window.innerWidth / 100, window.innerHeight / 100, 50, 50);
+        const material = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0.0 },
+                uColorA: { value: new THREE.Color('#0A0A0A') },
+                uColorB: { value: new THREE.Color('#1A1A1A') }
+            },
+            vertexShader: `
+                uniform float uTime;
+                varying float vNoise;
+                // 2D simplex noise function
+                vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+                float snoise(vec2 v) {
+                    const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+                    vec2 i = floor(v + dot(v, C.yy));
+                    vec2 x0 = v - i + dot(i, C.xx);
+                    vec2 i1;
+                    i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+                    vec4 x12 = x0.xyxy + C.xxzz;
+                    x12.xy -= i1;
+                    i = mod(i, 289.0);
+                    vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+                    vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+                    m = m * m;
+                    m = m * m;
+                    vec3 x = 2.0 * fract(p * C.www) - 1.0;
+                    vec3 h = abs(x) - 0.5;
+                    vec3 ox = floor(x + 0.5);
+                    vec3 a0 = x - ox;
+                    m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+                    vec3 g;
+                    g.x = a0.x * x0.x + h.x * x0.y;
+                    g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+                    return 130.0 * dot(m, g);
+                }
+                void main() {
+                    vec3 pos = position;
+                    float noise = snoise(vec2(pos.x * 0.3, pos.y * 0.3 + uTime * 0.1));
+                    pos.z += noise * 0.1;
+                    vNoise = noise;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uColorA;
+                uniform vec3 uColorB;
+                varying float vNoise;
+                void main() {
+                    float noiseFactor = (vNoise + 1.0) * 0.5;
+                    vec3 mixedColor = mix(uColorA, uColorB, noiseFactor);
+                    gl_FragColor = vec4(mixedColor, 1.0);
+                }
+            `
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+        camera.position.z = 5;
+
+        const clock = new THREE.Clock();
+        function animate() {
+            material.uniforms.uTime.value = clock.getElapsedTime();
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        });
+
+        // --- GSAP Animations ---
+        gsap.registerPlugin(ScrollTrigger);
+
+        const tl = gsap.timeline();
+        tl.from("#hero-title-1, #hero-title-2", {
+            y: 100,
+            duration: 1,
+            ease: 'power4.out',
+            stagger: 0.1
+        }).from("#hero-subtitle", {
+            opacity: 0,
+            y: 20,
+            duration: 0.8,
+            ease: 'power2.out'
+        }, "-=0.5");
+
+        const items = gsap.utils.toArray('.grid-item');
+        items.forEach(item => {
+            gsap.fromTo(item, 
+                { y: 50, opacity: 0 },
+                {
+                    y: 0,
+                    opacity: 1,
+                    duration: 1.2,
+                    ease: 'power3.out',
+                    scrollTrigger: {
+                        trigger: item,
+                        start: 'top 85%',
+                        toggleActions: 'play none none none',
+                    }
+                }
+            );
+        });
+
+        // --- Anime.js Micro-interactions ---
+        document.querySelectorAll('.grid-item h2').forEach(header => {
+            header.addEventListener('mouseenter', () => {
+                anime({
+                    targets: header,
+                    color: '#4A90E2',
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
+            });
+            header.addEventListener('mouseleave', () => {
+                anime({
+                    targets: header,
+                    color: '#FFFFFF',
+                    duration: 300,
+                    easing: 'easeOutQuad'
+                });
+            });
+        });
+    });
+    </script>
+</body>
+</html>
